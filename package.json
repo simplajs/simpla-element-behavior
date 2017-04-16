@@ -1,6 +1,6 @@
 {
   "name": "simpla-element-behavior",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Instantly connect an element to Simpla's API",
   "main": "simpla-element-behavior.html",
   "scripts": {
