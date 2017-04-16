@@ -157,9 +157,9 @@
      */
     _updateSimplaBuffer() {
       let { type, dataProperties } = this.__simplaConfig,
-          data = Object.assign(...dataProperties.map(prop => {
-            return { [prop]: this[prop] };
-          }));
+          data = {};
+
+      dataProperties.forEach(prop => data[prop] = this[prop]);
 
       if (!this.path) {
         return;
