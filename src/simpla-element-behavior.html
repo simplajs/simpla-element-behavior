@@ -117,7 +117,9 @@
 
       Simpla.get(path)
         .then(item => {
-          if (item && item.data && path === item.path) {
+          let pathChanged = item.path !== this.path;
+
+          if (!pathChanged && item && item.data) {
             this[getCallback](item);
             this._setLoaded(true);
           }
