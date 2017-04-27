@@ -111,7 +111,7 @@
      * @return {undefined}
      */
     _initSimplaPath(path) {
-      let { getCallback } = this.__simplaConfig;
+      let { getCallback, setCallback } = this.__simplaConfig;
 
       this._setLoaded(false);
 
@@ -119,9 +119,14 @@
         .then(item => {
           let pathChanged = item.path !== this.path;
 
-          if (!pathChanged && item && item.data) {
-            this[getCallback](item);
-            this._setLoaded(true);
+          if (!pathChanged) {
+            if (item && item.data) {
+              this[getCallback](item);
+              this._setLoaded(true);
+            } else {
+              // Set static content into buffer
+              this[setCallback]();
+            }
           }
         });
 
