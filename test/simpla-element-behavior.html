@@ -121,9 +121,12 @@
           it('should follow Simplas editable state', () => {
             component.editable = false;
 
-            Simpla.editable(true);
-
-            expect(component.editable).to.be.true;
+            return Promise.resolve()
+              .then(() => Simpla.editable(true))
+              .then(wait())
+              .then(() => {
+                expect(component.editable).to.be.true;
+              });
           });
         });
 
