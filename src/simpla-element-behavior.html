@@ -109,18 +109,26 @@
        * @param  {String} path Current value of path prop
        * @return {undefined}
        */
-      _initSimplaPath(path) {        
+      _initSimplaPath(path) {
         this._setLoaded(false);
 
         Simpla.get(path)
           .then(item => {
-            let isValid = item && item.data,
+            let isEmpty = !(item && item.data),
                 pathChanged = this.path !== item.path;
 
-            if (isValid && !pathChanged) {
-              this._protectedGetCallback(item);
-              this._setLoaded(true);
+            if (pathChanged) {
+              return;
             }
+
+            if (isEmpty) {
+              // Load static content
+              this._protectedSetCallback();
+            } else {
+              this._protectedGetCallback(item);
+            }
+
+            this._setLoaded(true);
           });
 
         this._observeSimplaBuffer(path);

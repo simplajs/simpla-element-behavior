@@ -244,6 +244,51 @@
               });
           });
         });
+
+        describe('static-content', () => {
+          let path = '/static-content',
+              component;
+
+          beforeEach(() => {
+            let Component = defineComponent(
+              { type: 'Component', dataProperties: [ 'text' ] },
+              { properties: { text: String } }
+            );
+
+            component = new Component();
+            component.text = 'Some static content';
+
+            document.body.appendChild(component);
+
+            Simpla.editable(false);
+          });
+
+          afterEach(() => {
+            component.parentElement.removeChild(component);
+          });
+
+          it(`should set content into the buffer if no content is available`, () => {
+            component.path = path;
+
+            return Promise.resolve(wait())
+              .then(() => Simpla.get(path))
+              .then((content) => {
+                expect(content.data.text).to.equal(component.text);
+              });
+          });
+
+          it(`should not set it's own content to the buffer if the buffer is already dirty`, () => {
+            let text = 'Hello World';
+
+            return Simpla.set(path, { data: { text } })
+              .then(wait())
+              .then(() => component.path = path)
+              .then(() => Simpla.get(path))
+              .then((content) => {
+                expect(content.data.text).to.equal(text);
+              });
+          });
+        });
       });
     </script>
   </body>
