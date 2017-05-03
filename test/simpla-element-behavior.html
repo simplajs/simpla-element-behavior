@@ -44,10 +44,11 @@
                 dataProperties: [ 'meta' ],
                 updateOn: [ 'changed' ]
               },
+              Component,
               component;
 
           beforeEach(() => {
-            let Component = defineComponent(config, base);
+            Component = defineComponent(config, base);
             component = new Component();
             component.path = path;
           });
@@ -182,6 +183,38 @@
               .then(() => {
                 expect(component._loadFromSimpla.calledWith(pathAItem)).to.be.false;
                 expect(component._loadFromSimpla.calledWith(pathBItem)).to.be.true;
+              });
+          });
+        });
+
+        describe('preventing infinite loops', () => {
+          let config,
+              base;
+
+          config = {
+            type: 'Component',
+            dataProperties: [ 'text' ],
+            setCallback: 'setCallback'
+          };
+
+          base = {
+            properties: { text: String },
+            setCallback: () => {}
+          };
+
+          it('should not set to buffer during load from simpla', () => {
+            let Component = defineComponent(config, base),
+                component = new Component();
+
+            component.path = path;
+
+            sinon.stub(component, 'setCallback');
+
+            return Promise.resolve()
+              .then(() => Simpla.set(path, { data: { text: 'Hello World' } }))
+              .then(wait())
+              .then(() => {
+                expect(component.setCallback.called).to.be.false;
               });
           });
         });

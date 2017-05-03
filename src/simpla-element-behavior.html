@@ -21,9 +21,9 @@
         listeners,
         observers;
 
-    const propsToObservers = (prop) => `${setCallback}(${prop})`,
+    const propsToObservers = (prop) => `_protectedSetCallback(${prop})`,
           eventsToListeners = (listeners, event) => {
-            return Object.assign(listeners, { [event]: setCallback });
+            return Object.assign(listeners, { [event]: '_protectedSetCallback' });
           };
 
     return {
@@ -115,7 +115,7 @@
         Simpla.get(path)
           .then(item => {
             if (item && item.data && this.path === item.path) {
-              this[getCallback](item);
+              this._protectedGetCallback(item);
               this._setLoaded(true);
             }
           });
@@ -141,7 +141,7 @@
 
         observers.buffer = Simpla.observe(path, item => {
           if (item && item.data && path === item.path) {
-            this[getCallback](item);
+            this._protectedGetCallback(item);
           }
         });
       },
@@ -168,6 +168,18 @@
 
       _updateFromSimpla(item) {
         Object.assign(this, item.data);
+      },
+
+      _protectedGetCallback(item) {
+        this.__loadingFromSimpla = true;
+        this[getCallback](item);
+        this.__loadingFromSimpla = false;
+      },
+
+      _protectedSetCallback() {
+        if (!this.__loadingFromSimpla) {
+          this[setCallback]();
+        }
       },
 
       /**
