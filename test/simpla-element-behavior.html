@@ -5,9 +5,13 @@
     <title>simpla-behavior</title>
     <script src="../../web-component-tester/browser.js"></script>
 
+    <!-- Import WC polyfills -->
+    <script src="https://unpkg.com/webcomponents.js@^0.7.24/webcomponents-lite.min.js"></script>
+
     <!-- Import Simpla -->
     <script src="https://unpkg.com/simpla@^2.0.0"></script>
     <script> Simpla.init('test'); </script>
+
     <!-- Import Polymer for test element -->
     <link rel="import" href="../bower_components/polymer/polymer.html">
 
@@ -115,9 +119,9 @@
             setCallback: '_setToSimpla'
           }
 
-          Component = defineComponent(config, base);
-
           beforeEach(() => {
+            Component = defineComponent(config, base);
+
             component = new Component();
 
             sinon.stub(component, '_loadFromSimpla', function(item) {
