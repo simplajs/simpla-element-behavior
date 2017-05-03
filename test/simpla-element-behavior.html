@@ -51,6 +51,11 @@
             Component = defineComponent(config, base);
             component = new Component();
             component.path = path;
+            document.body.appendChild(component);
+          });
+
+          afterEach(() => {
+            component.parentElement.removeChild(component);
           });
 
           it('should set with given type', () => {
@@ -98,6 +103,27 @@
               .then(wait())
               .then(() => Simpla.get(path))
               .then((response) => expect(response.data.meta.foo).to.equal('baz'));
+          });
+
+          it('should update content when path changes', () => {
+            let secondaryPath = '/path-b',
+                secondaryMeta = { some: 'value' };
+
+            return Promise.resolve()
+              .then(() => Simpla.set(secondaryPath, { data: { meta: secondaryMeta } }))
+              .then(() => component.path = secondaryPath)
+              .then(wait())
+              .then(() => {
+                expect(component.meta).to.deep.equal(secondaryMeta);
+              })
+          });
+
+          it('should follow Simplas editable state', () => {
+            component.editable = false;
+
+            Simpla.editable(true);
+
+            expect(component.editable).to.be.true;
           });
         });
 
