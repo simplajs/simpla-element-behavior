@@ -153,6 +153,33 @@
                 expect(component._setToSimpla.returned('foo')).to.be.true;
               });
           });
+
+          it('should not update data if path changed mid-request', () => {
+            let pathA = '/path-a',
+                pathB = '/path-b',
+                pathAItem,
+                pathBItem;
+
+            component = new Component();
+            sinon.stub(component, '_loadFromSimpla');
+
+            return Promise.resolve()
+              .then(() => Simpla.set(pathA, { data: { text: 'foo' } }))
+              .then(response => pathAItem = response)
+              .then(() => {
+                let promise;
+                component.path = pathA;
+                promise = Simpla.set(pathB, { data: { text: 'bar' } });
+                component.path = pathB;
+                return promise;
+              })
+              .then(response => pathBItem = response)
+              .then(wait())
+              .then(() => {
+                expect(component._loadFromSimpla.calledWith(pathAItem)).to.be.false;
+                expect(component._loadFromSimpla.calledWith(pathBItem)).to.be.true;
+              });
+          });
         });
       });
     </script>
