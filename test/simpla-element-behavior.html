@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>simpla-behavior</title>
+    <script src="../../web-component-tester/browser.js"></script>
+
+    <!-- Import Simpla -->
+    <script src="https://unpkg.com/simpla@^2.0.0"></script>
+    <script> Simpla.init('test'); </script>
+    <!-- Import Polymer for test element -->
+    <link rel="import" href="../bower_components/polymer/polymer.html">
+
+    <!-- Import the element to test -->
+    <link rel="import" href="../simpla-element-behavior.html">
+
+  </head>
+  <body>
+    <script>
+      const wait = (delay = 5) => () => new Promise(resolve => setTimeout(resolve, delay));
+
+      function defineComponent(config, base) {
+        let is = `test-component-${Math.random().toString(36).slice(0,5)}`,
+            behaviors = [ SimplaBehaviors.Element(config) ];
+
+        return Polymer(Object.assign({ is, behaviors }, base));
+      }
+
+      describe('simpla-behavior', () => {
+        let path = '/some-path';
+
+        beforeEach(() => {
+          Simpla.set(path, { data: {} });
+        });
+
+        describe('basic functionality', () => {
+          let base = { properties: { meta: Object } },
+              config = {
+                type: 'Component',
+                dataProperties: [ 'meta' ],
+                updateOn: [ 'changed' ]
+              },
+              component;
+
+          beforeEach(() => {
+            let Component = defineComponent(config, base);
+            component = new Component();
+            component.path = path;
+          });
+
+          it('should set with given type', () => {
+            component.meta = { foo: 'bar' }
+            return Promise.resolve()
+              .then(wait())
+              .then(() => Simpla.get(path))
+              .then(response => {
+                expect(response.type).to.equal(config.type);
+              })
+          });
+
+          it('should set property value to Simpla', () => {
+            return Promise.resolve()
+              .then(() => component.meta = { foo: 'bar' })
+              .then(wait())
+              .then(() => Simpla.get(path))
+              .then(response => {
+                expect(response.data.meta).to.deep.equal(component.meta);
+              })
+          });
+
+          it('should get property value from Simpla', () => {
+            let meta = { foo: 'bar' };
+
+            return Promise.resolve()
+              .then(() => Simpla.set(path, { data: { meta } }))
+              .then(wait())
+              .then(() => {
+                expect(component.meta).to.deep.equal(meta);
+              });
+          });
+
+          it('should update buffer when event is fired', () => {
+            return Promise.resolve()
+              .then(() => component.meta = { foo: 'bar' })
+              .then(wait())
+              .then(() => Simpla.set(path, { data: {} }))
+              .then(wait())
+              .then(() => component.meta.foo = 'baz')
+              .then(wait())
+              .then(() => Simpla.get(path))
+              .then((response) => expect(response.data).to.deep.equal({}))
+              .then(() => component.fire('changed'))
+              .then(wait())
+              .then(() => Simpla.get(path))
+              .then((response) => expect(response.data.meta.foo).to.equal('baz'));
+          });
+        });
+
+        describe('custom callbacks, path changing', () => {
+          let base,
+              config,
+              component,
+              Component;
+
+          base = {
+            properties: { text: String },
+            _setToSimpla: () => {},
+            _loadFromSimpla: () => {}
+          };
+
+          config = {
+            type: 'Component',
+            dataProperties: [ 'text' ],
+            getCallback: '_loadFromSimpla',
+            setCallback: '_setToSimpla'
+          }
+
+          Component = defineComponent(config, base);
+
+          beforeEach(() => {
+            component = new Component();
+
+            sinon.stub(component, '_loadFromSimpla', function(item) {
+              return item.data;
+            });
+
+            sinon.stub(component, '_setToSimpla', function() {
+              return this.text;
+            });
+
+            component.path = path;
+          });
+
+          it('should call supplied getCallback', () => {
+            let item = { data: { text: 'foo' } };
+
+            return Promise.resolve()
+              .then(() => Simpla.set(path, item))
+              // Normalize item
+              .then((response) => item = response)
+              .then(wait())
+              .then(() => {
+                expect(component._loadFromSimpla.calledWith(item)).to.be.true;
+              });
+          });
+
+          it('should call supplied setCallback', () => {
+            return Promise.resolve()
+              .then(() => component.text = 'foo')
+              .then(wait())
+              .then(() => {
+                expect(component._setToSimpla.called).to.be.true;
+                expect(component._setToSimpla.returned('foo')).to.be.true;
+              });
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
