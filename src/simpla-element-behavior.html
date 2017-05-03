@@ -109,12 +109,15 @@
        * @param  {String} path Current value of path prop
        * @return {undefined}
        */
-      _initSimplaPath(path) {
+      _initSimplaPath(path) {        
         this._setLoaded(false);
 
         Simpla.get(path)
           .then(item => {
-            if (item && item.data && this.path === item.path) {
+            let isValid = item && item.data,
+                pathChanged = this.path !== item.path;
+
+            if (isValid && !pathChanged) {
               this._protectedGetCallback(item);
               this._setLoaded(true);
             }
@@ -140,7 +143,7 @@
         }
 
         observers.buffer = Simpla.observe(path, item => {
-          if (item && item.data && path === item.path) {
+          if (item && item.data) {
             this._protectedGetCallback(item);
           }
         });
@@ -166,16 +169,30 @@
         });
       },
 
+      /**
+       * Update element from Simpla data
+       * @param  {Object} item The data from Simpla to update with
+       * @return {undefined}
+       */
       _updateFromSimpla(item) {
         Object.assign(this, item.data);
       },
 
+      /**
+       * Calls the getCallback but protects against triggering an infinite loop
+       * @param  {Object} item Item to give to getCallback
+       * @return {undefined}
+       */
       _protectedGetCallback(item) {
         this.__loadingFromSimpla = true;
         this[getCallback](item);
         this.__loadingFromSimpla = false;
       },
 
+      /**
+       * Calls the setCallback but protects against triggering an infinite loop
+       * @return {undefined}
+       */
       _protectedSetCallback() {
         if (!this.__loadingFromSimpla) {
           this[setCallback]();
