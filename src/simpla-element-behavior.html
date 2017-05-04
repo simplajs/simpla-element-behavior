@@ -34,7 +34,7 @@
          */
         path: {
           type: String,
-          observer: '_initSimplaPath'
+          observer: '_initPathIfReady'
         },
 
         /**
@@ -86,9 +86,14 @@
        * @return {undefined}
        */
       attached() {
+        this._attached = true;
+
         // Setup editable property
         this.editable = this.editable || Simpla.getState('editable');
         this._observeSimplaEditable();
+
+        // Try set up path observer
+        this._initPathIfReady(this.path);
       },
 
       /**
@@ -105,7 +110,18 @@
       },
 
       /**
-       * Init the path whenever it changes
+       * Checks if attached and has a valid path. If so, calls _initSimplaPath
+       * @param  {String} path Current value of path prop
+       * @return {undefined}
+       */
+      _initPathIfReady(path) {
+        if (this._attached && typeof path !== undefined) {
+          this._initSimplaPath(path);
+        }
+      },
+
+      /**
+       * Init the path observer
        * @param  {String} path Current value of path prop
        * @return {undefined}
        */

@@ -65,7 +65,7 @@
               .then(() => Simpla.get(path))
               .then(response => {
                 expect(response.type).to.equal(config.type);
-              })
+              });
           });
 
           it('should set property value to Simpla', () => {
@@ -86,6 +86,19 @@
               .then(wait())
               .then(() => {
                 expect(component.meta).to.deep.equal(meta);
+              });
+          });
+
+          it('should not observe path while detached from DOM', () => {
+            let unattached = new Component(),
+                meta = { foo: 'bar' };
+
+            unattached.path = path;
+            return Promise.resolve()
+              .then(() => Simpla.set(path, { data: { meta } }))
+              .then(wait())
+              .then(() => {
+                expect(unattached.meta).to.not.deep.equal(meta);
               });
           });
 
@@ -153,6 +166,7 @@
             Component = defineComponent(config, base);
 
             component = new Component();
+            document.body.appendChild(component);
 
             sinon.stub(component, '_loadFromSimpla', function(item) {
               return item.data;
@@ -163,6 +177,10 @@
             });
 
             component.path = path;
+          });
+
+          afterEach(() => {
+            component.parentElement.removeChild(component);
           });
 
           it('should call supplied getCallback', () => {
@@ -195,6 +213,7 @@
                 pathBItem;
 
             component = new Component();
+            document.body.appendChild(component);
             sinon.stub(component, '_loadFromSimpla');
 
             return Promise.resolve()
