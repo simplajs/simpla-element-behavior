@@ -17,22 +17,20 @@ Import into your element
 <link rel="import" href="/bower_components/simpla-element-behavior/simpla-element-behavior.html">
 ```
 
-And include the behavior by adding `SimplaBehaviors.Element` to your behaviors array. Then call `this.setupSimpla()` on the `created` callback with your element's configuration (see full options below).
+And create the behavior object by calling `SimplaBehaviors.Element` with your element's configuration (see full options below), then use that behavior in your `behaviors` array.
 
 ```html
+const SIMPLA_CONFIG = {
+  type: 'Text',
+  dataProperties: [ 'value' ]
+};
+
 Polymer({
   is: 'my-element',
-  
+
   ...
 
-  behaviors: [ SimplaBehaviors.Element ],
-
-  created: function() {
-    this.setupSimpla({
-      type: 'Text',
-      dataProperties: [ 'value' ]
-    });
-  }
+  behaviors: [ SimplaBehaviors.Element(SIMPLA_CONFIG) ]
 });
 ```
 
@@ -43,24 +41,23 @@ Configure your connection to Simpla in the `setupSimpla()` method. It takes thes
 Property         | Type     | Description                                                                                                                                  
 ---------------- | -------- | ------------                                                                                                                                  
 `type`           | `String` | Type of content created by this element (read more about [Simpla's content model](https://www.simpla.io/docs/guides/content-model))          
-`dataProperties` | `Array`  | The properties you wish to sync to Simpla's API                                                                                              
-`updateOn`       | `Array`  | Optional extra events to update data on, by default Simpla will only update its data when any of the data properties change value        
-`getCallback`    | `String` | Override the default method used to set properties on your element from Simpla, specified as the name of a method available on your element 
-`setCallback`    | `String` | Override the default method used to set data to Simpla's buffer, specified as the name of a method available on your element                     
+`dataProperties` | `Array`  | The properties you wish to sync to Simpla's API                                                                                                  
+`get`    | `String` | Override the default method used to set properties on your element from Simpla, specified as the name of a method available on your element
+`set`    | `String` | Override the default method used to set data to Simpla's buffer, specified as the name of a method available on your element                     
 
 ## Properties
 
-This behavior adds the following properties to your element. Any property can be overriden by adding your own property defition of the same name in the main `Polymer` constructor
+This behavior adds the following properties to your element. Any property can be overriden by adding your own property definition of the same name in the main `Polymer` constructor
 
 Property   | Type      | Description                                                                         
 ---------- | --------- | ------------                                                                         
-`path`     | `String`  | Content path where the element will store its data on Simpla's API, set by the user 
+`path`     | `String`  | Content path where the element will store its data on Simpla's API, set by the user
 `editable` | `Boolean` | Whether the element should be editable, synced to Simpla's `'editable'` state       
 `loaded`   | `Boolean` | Whether a new path's data has been set on the element                               
 
 ## Contributing
 
-If you find any issues with simpla-element-behavior please report them! If you'd like to see a new feature in supported file an issue or let us know in Simpla's public [Slack group](https://slack.simpla.io). We also happily accept PRs. 
+If you find any issues with simpla-element-behavior please report them! If you'd like to see a new feature in supported file an issue or let us know in Simpla's public [Slack group](https://slack.simpla.io). We also happily accept PRs.
 
 ***
 
