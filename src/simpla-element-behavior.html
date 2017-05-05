@@ -202,7 +202,9 @@
         if (!this.__loadingFromSimpla && this.path) {
           let data = this[setCallback]();
 
-          Simpla.set(this.path, { type, data });
+          if (typeof data !== 'undefined') {
+            Simpla.set(this.path, { type, data });
+          }
         }
       },
 
