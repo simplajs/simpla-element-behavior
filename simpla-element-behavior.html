@@ -22,16 +22,10 @@ SimplaBehaviors.Element = function (config) {
       type = _Object$assign.type,
       getCallback = _Object$assign.get,
       setCallback = _Object$assign.set,
-      dataProperties = _Object$assign.dataProperties,
-      updateOn = _Object$assign.updateOn,
-      listeners = void 0,
-      observers = void 0;
+      dataProperties = _Object$assign.dataProperties;
 
   var propsToObservers = function propsToObservers(prop) {
     return '_protectedSetCallback(' + prop + ')';
-  },
-      eventsToListeners = function eventsToListeners(listeners, event) {
-    return _extends(listeners, _defineProperty({}, event, '_protectedSetCallback'));
   };
 
   return {
@@ -76,8 +70,6 @@ SimplaBehaviors.Element = function (config) {
         }
       }
     },
-
-    listeners: updateOn.reduce(eventsToListeners, {}),
 
     observers: dataProperties.map(propsToObservers),
 

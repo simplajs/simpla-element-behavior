@@ -15,16 +15,10 @@
           type,
           get: getCallback,
           set: setCallback,
-          dataProperties,
-          updateOn
-        } = Object.assign({}, DEFAULT_CONFIG, config),
-        listeners,
-        observers;
+          dataProperties
+        } = Object.assign({}, DEFAULT_CONFIG, config);
 
-    const propsToObservers = (prop) => `_protectedSetCallback(${prop})`,
-          eventsToListeners = (listeners, event) => {
-            return Object.assign(listeners, { [event]: '_protectedSetCallback' });
-          };
+    const propsToObservers = (prop) => `_protectedSetCallback(${prop})`;
 
     return {
       properties: {
@@ -66,8 +60,6 @@
           value: () => ({})
         }
       },
-
-      listeners: updateOn.reduce(eventsToListeners, {}),
 
       observers: dataProperties.map(propsToObservers),
 

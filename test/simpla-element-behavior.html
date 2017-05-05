@@ -41,8 +41,7 @@
           let base = { properties: { meta: Object } },
               config = {
                 type: 'Component',
-                dataProperties: [ 'meta' ],
-                updateOn: [ 'changed' ]
+                dataProperties: [ 'meta' ]
               },
               Component,
               component;
@@ -100,22 +99,6 @@
               .then(() => {
                 expect(unattached.meta).to.not.deep.equal(meta);
               });
-          });
-
-          it('should update buffer when event is fired', () => {
-            return Promise.resolve()
-              .then(() => component.meta = { foo: 'bar' })
-              .then(wait())
-              .then(() => Simpla.set(path, { data: {} }))
-              .then(wait())
-              .then(() => component.meta.foo = 'baz')
-              .then(wait())
-              .then(() => Simpla.get(path))
-              .then((response) => expect(response.data).to.deep.equal({}))
-              .then(() => component.fire('changed'))
-              .then(wait())
-              .then(() => Simpla.get(path))
-              .then((response) => expect(response.data.meta.foo).to.equal('baz'));
           });
 
           it('should update content when path changes', () => {
