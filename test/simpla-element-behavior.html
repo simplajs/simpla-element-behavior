@@ -158,8 +158,8 @@
           config = {
             type: 'Component',
             dataProperties: [ 'text' ],
-            getCallback: '_loadFromSimpla',
-            setCallback: '_setToSimpla'
+            get: '_loadFromSimpla',
+            set: '_setToSimpla'
           }
 
           beforeEach(() => {
@@ -168,12 +168,10 @@
             component = new Component();
             document.body.appendChild(component);
 
-            sinon.stub(component, '_loadFromSimpla', function(item) {
-              return item.data;
-            });
+            sinon.stub(component, '_loadFromSimpla');
 
             sinon.stub(component, '_setToSimpla', function() {
-              return this.text;
+              return { text: this.text };
             });
 
             component.path = path;
@@ -183,7 +181,7 @@
             component.parentElement.removeChild(component);
           });
 
-          it('should call supplied getCallback', () => {
+          it('should use supplied get callback', () => {
             let item = { data: { text: 'foo' } };
 
             return Promise.resolve()
@@ -196,13 +194,14 @@
               });
           });
 
-          it('should call supplied setCallback', () => {
+          it('should use supplied set callback', () => {
             return Promise.resolve()
               .then(() => component.text = 'foo')
               .then(wait())
-              .then(() => {
+              .then(() => Simpla.get(path))
+              .then((response) => {
                 expect(component._setToSimpla.called).to.be.true;
-                expect(component._setToSimpla.returned('foo')).to.be.true;
+                expect(response.data.text).to.equal('foo');
               });
           });
 

@@ -1,7 +1,7 @@
 <script>
   const DEFAULT_CONFIG = {
-          getCallback: '_updateFromSimpla',
-          setCallback: '_updateSimplaBuffer',
+          get: '_updateFromSimpla',
+          set: '_updateSimplaBuffer',
           updateOn: []
         },
         ERRORS = {
@@ -13,8 +13,8 @@
   SimplaBehaviors.Element = function(config) {
     let {
           type,
-          getCallback,
-          setCallback,
+          get: getCallback,
+          set: setCallback,
           dataProperties,
           updateOn
         } = Object.assign({}, DEFAULT_CONFIG, config),
@@ -174,23 +174,13 @@
       },
 
       /**
-       * Update Simpla's data on data prop changes
-       * @param {Object} data Data to set to Simpla
-       * @return {undefined}
+       * Sets up the data property to send to Simpla based on given dataProperties
+       * @return {Object}  Data to set to Simpla
        */
       _updateSimplaBuffer() {
-        let data = {};
-
-        dataProperties.forEach(prop => data[prop] = this[prop]);
-
-        if (!this.path) {
-          return;
-        }
-
-        return Simpla.set(this.path, {
-          type: type,
-          data: data,
-        });
+        return dataProperties.reduce((data, prop) => {
+          return Object.assign(data, { [ prop ]: this[prop] });
+        }, {});
       },
 
       /**
@@ -218,8 +208,10 @@
        * @return {undefined}
        */
       _protectedSetCallback() {
-        if (!this.__loadingFromSimpla) {
-          this[setCallback]();
+        if (!this.__loadingFromSimpla && this.path) {
+          let data = this[setCallback]();
+
+          Simpla.set(this.path, { type, data });
         }
       },
 
