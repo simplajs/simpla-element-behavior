@@ -1,7 +1,7 @@
 <script>
   const DEFAULT_CONFIG = {
-          get: '_updateFromSimpla',
-          set: '_updateSimplaBuffer'
+          getCallback: '_updateFromSimpla',
+          setCallback: '_updateSimplaBuffer'
         },
         ERRORS = {
           NO_SIMPLA: 'Cannot find Simpla, ensure it is included before this component'
@@ -12,8 +12,8 @@
   SimplaBehaviors.Element = function(config) {
     let {
           type,
-          get: getCallback,
-          set: setCallback,
+          getCallback,
+          setCallback,
           dataProperties
         } = Object.assign({}, DEFAULT_CONFIG, config);
 

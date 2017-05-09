@@ -141,8 +141,8 @@
           config = {
             type: 'Component',
             dataProperties: [ 'text' ],
-            get: '_loadFromSimpla',
-            set: '_setToSimpla'
+            getCallback: '_loadFromSimpla',
+            setCallback: '_setToSimpla'
           }
 
           beforeEach(() => {
