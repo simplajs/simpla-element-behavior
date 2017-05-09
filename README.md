@@ -17,9 +17,9 @@ Import into your element
 <link rel="import" href="/bower_components/simpla-element-behavior/simpla-element-behavior.html">
 ```
 
-And create the behavior object by calling `SimplaBehaviors.Element` with your element's configuration (see full options below), then use that behavior in your `behaviors` array.
+And include the behavior by adding `SimplaBehaviors.Element(config)` in your behaviors array with the configuration options for your element (see full options below)
 
-```html
+```js
 const SIMPLA_CONFIG = {
   type: 'Text',
   dataProperties: [ 'value' ]
@@ -36,14 +36,14 @@ Polymer({
 
 ## Configuration
 
-Configure your connection to Simpla in the `setupSimpla()` method. It takes these options
-
 Property         | Type     | Description                                                                                                                                  
 ---------------- | -------- | ------------                                                                                                                                  
 `type`           | `String` | Type of content created by this element (read more about [Simpla's content model](https://www.simpla.io/docs/guides/content-model))          
 `dataProperties` | `Array`  | The properties you wish to sync to Simpla's API                                                                                                  
-`get`    | `String` | Override the default method used to set properties on your element from Simpla, specified as the name of a method available on your element
-`set`    | `String` | Override the default method used to set data to Simpla's buffer, specified as the name of a method available on your element                     
+`getCallback`    | `String` | Override the default method used to set properties on your element from Simpla, specified as the name of a method available on your element
+`setCallback`    | `String` | Override the default method used to set data to Simpla's buffer, specified as the name of a method available on your element                    
+
+The `setCallback` method expects you to return the values you wish to set to Simpla every time your `dataProperties` change. If you return `null` or `undefined` the buffer is not updated.
 
 ## Properties
 
