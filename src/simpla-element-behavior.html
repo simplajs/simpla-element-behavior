@@ -106,7 +106,7 @@
        * @return {undefined}
        */
       _initPathIfReady(path) {
-        if (this._attached && typeof path !== undefined) {
+        if (this._attached && typeof path !== 'undefined') {
           this._initSimplaPath(path);
         }
       },
@@ -122,7 +122,7 @@
         Simpla.get(path)
           .then(item => {
             let isEmpty = !(item && item.data),
-                pathChanged = this.path !== item.path;
+                pathChanged = this.path !== path;
 
             if (pathChanged) {
               return;
