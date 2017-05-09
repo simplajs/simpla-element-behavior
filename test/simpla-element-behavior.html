@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>simpla-behavior</title>
+    <script src="../../web-component-tester/browser.js"></script>
+
+    <!-- Import WC polyfills -->
+    <script src="https://unpkg.com/webcomponents.js@^0.7.24/webcomponents-lite.min.js"></script>
+
+    <!-- Import Simpla -->
+    <script src="https://unpkg.com/simpla@^2.0.0"></script>
+    <script> Simpla.init('test'); </script>
+
+    <!-- Import Polymer for test element -->
+    <link rel="import" href="../bower_components/polymer/polymer.html">
+
+    <!-- Import the element to test -->
+    <link rel="import" href="../simpla-element-behavior.html">
+
+  </head>
+  <body>
+    <script>
+      const wait = (delay = 5) => () => new Promise(resolve => setTimeout(resolve, delay));
+
+      function defineComponent(config, base) {
+        let is = `test-component-${Math.random().toString(36).slice(0,5)}`,
+            behaviors = [ SimplaBehaviors.Element(config) ];
+
+        return Polymer(Object.assign({ is, behaviors }, base));
+      }
+
+      describe('simpla-behavior', () => {
+        let path = '/some-path';
+
+        beforeEach(() => {
+          Simpla.set(path, { data: {} });
+        });
+
+        describe('basic functionality', () => {
+          let base = { properties: { meta: Object } },
+              config = {
+                type: 'Component',
+                dataProperties: [ 'meta' ]
+              },
+              Component,
+              component;
+
+          beforeEach(() => {
+            Component = defineComponent(config, base);
+            component = new Component();
+            component.path = path;
+            document.body.appendChild(component);
+          });
+
+          afterEach(() => {
+            component.parentElement.removeChild(component);
+          });
+
+          it('should set with given type', () => {
+            component.meta = { foo: 'bar' }
+            return Promise.resolve()
+              .then(wait())
+              .then(() => Simpla.get(path))
+              .then(response => {
+                expect(response.type).to.equal(config.type);
+              });
+          });
+
+          it('should set property value to Simpla', () => {
+            return Promise.resolve()
+              .then(() => component.meta = { foo: 'bar' })
+              .then(wait())
+              .then(() => Simpla.get(path))
+              .then(response => {
+                expect(response.data.meta).to.deep.equal(component.meta);
+              })
+          });
+
+          it('should get property value from Simpla', () => {
+            let meta = { foo: 'bar' };
+
+            return Promise.resolve()
+              .then(() => Simpla.set(path, { data: { meta } }))
+              .then(wait())
+              .then(() => {
+                expect(component.meta).to.deep.equal(meta);
+              });
+          });
+
+          it('should not observe path while detached from DOM', () => {
+            let unattached = new Component(),
+                meta = { foo: 'bar' };
+
+            unattached.path = path;
+            return Promise.resolve()
+              .then(() => Simpla.set(path, { data: { meta } }))
+              .then(wait())
+              .then(() => {
+                expect(unattached.meta).to.not.deep.equal(meta);
+              });
+          });
+
+          it('should update content when path changes', () => {
+            let secondaryPath = '/path-b',
+                secondaryMeta = { some: 'value' };
+
+            return Promise.resolve()
+              .then(() => Simpla.set(secondaryPath, { data: { meta: secondaryMeta } }))
+              .then(() => component.path = secondaryPath)
+              .then(wait())
+              .then(() => {
+                expect(component.meta).to.deep.equal(secondaryMeta);
+              })
+          });
+
+          it('should follow Simplas editable state', () => {
+            component.editable = false;
+
+            return Promise.resolve()
+              .then(() => Simpla.editable(true))
+              .then(wait())
+              .then(() => {
+                expect(component.editable).to.be.true;
+              });
+          });
+        });
+
+        describe('custom callbacks, path changing', () => {
+          let base,
+              config,
+              component,
+              Component;
+
+          base = {
+            properties: { text: String },
+            _setToSimpla: () => {},
+            _loadFromSimpla: () => {}
+          };
+
+          config = {
+            type: 'Component',
+            dataProperties: [ 'text' ],
+            getCallback: '_loadFromSimpla',
+            setCallback: '_setToSimpla'
+          }
+
+          beforeEach(() => {
+            Component = defineComponent(config, base);
+
+            component = new Component();
+            document.body.appendChild(component);
+
+            sinon.stub(component, '_loadFromSimpla');
+
+            sinon.stub(component, '_setToSimpla', function() {
+              return { text: this.text };
+            });
+
+            component.path = path;
+          });
+
+          afterEach(() => {
+            component.parentElement.removeChild(component);
+          });
+
+          it('should use supplied get callback', () => {
+            let item = { data: { text: 'foo' } };
+
+            return Promise.resolve()
+              .then(() => Simpla.set(path, item))
+              // Normalize item
+              .then((response) => item = response)
+              .then(wait())
+              .then(() => {
+                expect(component._loadFromSimpla.calledWith(item)).to.be.true;
+              });
+          });
+
+          it('should use supplied set callback', () => {
+            return Promise.resolve()
+              .then(() => component.text = 'foo')
+              .then(wait())
+              .then(() => Simpla.get(path))
+              .then((response) => {
+                expect(component._setToSimpla.called).to.be.true;
+                expect(response.data.text).to.equal('foo');
+              });
+          });
+
+          it('should not update data if path changed mid-request', () => {
+            let pathA = '/path-a',
+                pathB = '/path-b',
+                pathAItem,
+                pathBItem;
+
+            component = new Component();
+            document.body.appendChild(component);
+            sinon.stub(component, '_loadFromSimpla');
+
+            return Promise.resolve()
+              .then(() => Simpla.set(pathA, { data: { text: 'foo' } }))
+              .then(response => pathAItem = response)
+              .then(() => {
+                let promise;
+                component.path = pathA;
+                promise = Simpla.set(pathB, { data: { text: 'bar' } });
+                component.path = pathB;
+                return promise;
+              })
+              .then(response => pathBItem = response)
+              .then(wait())
+              .then(() => {
+                expect(component._loadFromSimpla.calledWith(pathAItem)).to.be.false;
+                expect(component._loadFromSimpla.calledWith(pathBItem)).to.be.true;
+              });
+          });
+        });
+
+        describe('preventing infinite loops', () => {
+          let config,
+              base;
+
+          config = {
+            type: 'Component',
+            dataProperties: [ 'text' ],
+            setCallback: 'setCallback'
+          };
+
+          base = {
+            properties: { text: String },
+            setCallback: () => {}
+          };
+
+          it('should not set to buffer during load from simpla', () => {
+            let Component = defineComponent(config, base),
+                component = new Component();
+
+            component.path = path;
+
+            sinon.stub(component, 'setCallback');
+
+            return Promise.resolve()
+              .then(() => Simpla.set(path, { data: { text: 'Hello World' } }))
+              .then(wait())
+              .then(() => {
+                expect(component.setCallback.called).to.be.false;
+              });
+          });
+        });
+
+        describe('static-content', () => {
+          let path = '/static-content',
+              component;
+
+          beforeEach(() => {
+            let Component = defineComponent(
+              { type: 'Component', dataProperties: [ 'text' ] },
+              { properties: { text: String } }
+            );
+
+            component = new Component();
+            component.text = 'Some static content';
+
+            document.body.appendChild(component);
+
+            Simpla.editable(false);
+          });
+
+          afterEach(() => {
+            component.parentElement.removeChild(component);
+          });
+
+          it(`should set content into the buffer if no content is available`, () => {
+            component.path = path;
+
+            return Promise.resolve(wait())
+              .then(() => Simpla.get(path))
+              .then((content) => {
+                expect(content.data.text).to.equal(component.text);
+              });
+          });
+
+          it(`should not set it's own content to the buffer if the buffer is already dirty`, () => {
+            let text = 'Hello World';
+
+            return Simpla.set(path, { data: { text } })
+              .then(wait())
+              .then(() => component.path = path)
+              .then(() => Simpla.get(path))
+              .then((content) => {
+                expect(content.data.text).to.equal(text);
+              });
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

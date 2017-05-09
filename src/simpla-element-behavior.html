@@ -1,8 +1,7 @@
 <script>
   const DEFAULT_CONFIG = {
           getCallback: '_updateFromSimpla',
-          setCallback: '_updateSimplaBuffer',
-          updateOn: []
+          setCallback: '_updateSimplaBuffer'
         },
         ERRORS = {
           NO_SIMPLA: 'Cannot find Simpla, ensure it is included before this component'
@@ -10,185 +9,220 @@
 
   window.SimplaBehaviors = window.SimplaBehaviors || {};
 
-  SimplaBehaviors.Element = {
-    properties: {
+  SimplaBehaviors.Element = function(config) {
+    let {
+          type,
+          getCallback,
+          setCallback,
+          dataProperties
+        } = Object.assign({}, DEFAULT_CONFIG, config);
+
+    const propsToObservers = (prop) => `_protectedSetCallback(${prop})`;
+
+    return {
+      properties: {
+        /**
+         * Simpla content path
+         * @type {String}
+         */
+        path: {
+          type: String,
+          observer: '_initPathIfReady'
+        },
+
+        /**
+         * Whether element is editable
+         * @type {Boolean}
+         */
+        editable: {
+          type: Boolean,
+          notify: true
+        },
+
+        /**
+         * Whether content is loaded
+         * @type {Boolean}
+         */
+        loaded: {
+          type: Boolean,
+          readOnly: true,
+          notify: true,
+          value: false
+        },
+
+        /**
+         * Stored Simpla observers
+         * @type {Object}
+         */
+        __simplaObservers: {
+          type: Object,
+          value: () => ({})
+        }
+      },
+
+      observers: dataProperties.map(propsToObservers),
+
       /**
-       * Simpla content path
-       * @type {String}
+       * Check for Simpla on element creation
+       * @return {undefined}
        */
-      path: {
-        type: String,
-        observer: '_initSimplaPath'
+      created() {
+        if (!window.Simpla) {
+          throw new Error(ERRORS.NO_SIMPLA);
+        }
       },
 
       /**
-       * Whether element is editable
-       * @type {Boolean}
+       * Setup editable state observer on attach
+       * @return {undefined}
        */
-      editable: {
-        type: Boolean,
-        notify: true
+      attached() {
+        this._attached = true;
+
+        // Setup editable property
+        this.editable = this.editable || Simpla.getState('editable');
+        this._observeSimplaEditable();
+
+        // Try set up path observer
+        this._initPathIfReady(this.path);
       },
 
       /**
-       * Whether content is loaded
-       * @type {Boolean}
+       * Clean up Simpla observers on detach
+       * @return {undefined}
        */
-      loaded: {
-        type: Boolean,
-        readOnly: true,
-        notify: true,
-        value: false
+      detached() {
+        Object.keys(this.__simplaObservers)
+          .forEach(observer => {
+            this.__simplaObservers[observer].unobserve();
+          });
+
+        this.__simplaObservers = {};
       },
 
       /**
-       * Stored Simpla observers
-       * @type {Object}
+       * Checks if attached and has a valid path. If so, calls _initSimplaPath
+       * @param  {String} path Current value of path prop
+       * @return {undefined}
        */
-      __simplaObservers: {
-        type: Object,
-        value: () => ({})
-      }
-    },
+      _initPathIfReady(path) {
+        if (this._attached && typeof path !== 'undefined') {
+          this._initSimplaPath(path);
+        }
+      },
 
-    /**
-     * Check for Simpla on element creation
-     * @return {undefined}
-     */
-    created() {
-      if (!window.Simpla) {
-        throw new Error(ERRORS.NO_SIMPLA);
-      }
-    },
+      /**
+       * Init the path observer
+       * @param  {String} path Current value of path prop
+       * @return {undefined}
+       */
+      _initSimplaPath(path) {
+        this._setLoaded(false);
 
-    /**
-     * Setup editable state observer on attach
-     * @return {undefined}
-     */
-    attached() {
-      let { dataProperties, updateOn, setCallback } = this.__simplaConfig;
+        Simpla.get(path)
+          .then(item => {
+            let isEmpty = !(item && item.data),
+                pathChanged = this.path !== path;
 
-      // Setup data observers and listeners
-      dataProperties.forEach(property => {
-        this._addObserverEffect(property, setCallback);
-      });
+            if (pathChanged) {
+              return;
+            }
 
-      updateOn.forEach(event => {
-        this.listen(this, event, setCallback);
-      })
+            if (isEmpty) {
+              // Load static content
+              this._protectedSetCallback();
+            } else {
+              this._protectedGetCallback(item);
+            }
 
-      // Setup editable property
-      this.editable = this.editable || Simpla.getState('editable');
-      this._observeSimplaEditable();
-    },
-
-    /**
-     * Clean up Simpla observers on detach
-     * @return {undefined}
-     */
-    detached() {
-      Object.keys(this.__simplaObservers)
-        .forEach(observer => {
-          this.__simplaObservers[observer].unobserve();
-        });
-
-      this.__simplaObservers = {};
-    },
-
-    /**
-     * Setup config for Simpla behavior
-     * Must be called on created()
-     * @param  {Object} config Config object for behavior
-     * @return {undefined}
-     */
-    setupSimpla(config) {
-      this.__simplaConfig = Object.assign({}, DEFAULT_CONFIG, config);
-    },
-
-    /**
-     * Init the path whenever it changes
-     * @param  {String} path Current value of path prop
-     * @return {undefined}
-     */
-    _initSimplaPath(path) {
-      let { getCallback } = this.__simplaConfig;
-
-      this._setLoaded(false);
-
-      Simpla.get(path)
-        .then(item => {
-          if (item && item.data && path === item.path) {
-            this[getCallback](item);
             this._setLoaded(true);
+          });
+
+        this._observeSimplaBuffer(path);
+      },
+
+      /**
+       * Observe buffer for changes to update element
+       * @param  {String} path Path to observe in buffer
+       * @return {undefined}
+       */
+      _observeSimplaBuffer(path) {
+        let observers = this.__simplaObservers;
+
+        if (!path) {
+          return;
+        }
+
+        if (observers.buffer) {
+          observers.buffer.unobserve();
+        }
+
+        observers.buffer = Simpla.observe(path, item => {
+          if (item && item.data) {
+            this._protectedGetCallback(item);
           }
         });
+      },
 
-      this._observeSimplaBuffer(path);
-    },
+      /**
+       * Sets up the data property to send to Simpla based on given dataProperties
+       * @return {Object}  Data to set to Simpla
+       */
+      _updateSimplaBuffer() {
+        return dataProperties.reduce((data, prop) => {
+          return Object.assign(data, { [ prop ]: this[prop] });
+        }, {});
+      },
 
-    /**
-     * Observe buffer for changes to update element
-     * @param  {String} path Path to observe in buffer
-     * @return {undefined}
-     */
-    _observeSimplaBuffer(path) {
-      let observers = this.__simplaObservers,
-          { getCallback } = this.__simplaConfig;
+      /**
+       * Update element from Simpla data
+       * @param  {Object} item The data from Simpla to update with
+       * @return {undefined}
+       */
+      _updateFromSimpla(item) {
+        Object.assign(this, item.data);
+      },
 
-      if (!path) {
-        return;
-      }
+      /**
+       * Calls the getCallback but protects against triggering an infinite loop
+       * @param  {Object} item Item to give to getCallback
+       * @return {undefined}
+       */
+      _protectedGetCallback(item) {
+        this.__loadingFromSimpla = true;
+        this[getCallback](item);
+        this.__loadingFromSimpla = false;
+      },
 
-      if (observers.buffer) {
-        observers.buffer.unobserve();
-      }
+      /**
+       * Calls the setCallback but protects against triggering an infinite loop
+       * @return {undefined}
+       */
+      _protectedSetCallback() {
+        if (!this.__loadingFromSimpla && this.path) {
+          let data = this[setCallback]();
 
-      observers.buffer = Simpla.observe(path, item => {
-        if (item && item.data && path === item.path) {
-          this[getCallback](item);
+          if (typeof data !== 'undefined' || data === null) {
+            Simpla.set(this.path, { type, data });
+          }
         }
-      });
-    },
+      },
 
-    /**
-     * Update Simpla's data on data prop changes
-     * @param {Object} data Data to set to Simpla
-     * @return {undefined}
-     */
-    _updateSimplaBuffer() {
-      let { type, dataProperties } = this.__simplaConfig,
-          data = {};
+      /**
+       * Editable state observer
+       * @return {undefined}
+       */
+      _observeSimplaEditable() {
+        let observers = this.__simplaObservers;
 
-      dataProperties.forEach(prop => data[prop] = this[prop]);
+        if (observers.editable) {
+          observers.editable.unobserve();
+        }
 
-      if (!this.path) {
-        return;
+        observers.editable = Simpla.observeState('editable', editable => {
+          this.editable = editable;
+        });
       }
-
-      return Simpla.set(this.path, {
-        type: type,
-        data: data,
-      });
-    },
-
-    _updateFromSimpla(item) {
-      Object.assign(this, item.data);
-    },
-
-    /**
-     * Editable state observer
-     * @return {undefined}
-     */
-    _observeSimplaEditable() {
-      let observers = this.__simplaObservers;
-
-      if (observers.editable) {
-        observers.editable.unobserve();
-      }
-
-      observers.editable = Simpla.observeState('editable', editable => {
-        this.editable = editable;
-      });
     }
   }
 </script>
