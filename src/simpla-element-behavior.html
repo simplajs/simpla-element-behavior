@@ -199,7 +199,7 @@
        * @return {undefined}
        */
       _protectedSetCallback() {
-        if (!this.__loadingFromSimpla && this.path) {
+        if (!this.__loadingFromSimpla && this._attached && this.path) {
           let data = this[setCallback]();
 
           if (typeof data !== 'undefined' || data === null) {

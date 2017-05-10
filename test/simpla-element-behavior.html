@@ -21,10 +21,11 @@
   </head>
   <body>
     <script>
-      const wait = (delay = 5) => () => new Promise(resolve => setTimeout(resolve, delay));
+      const wait = (delay = 5) => () => new Promise(resolve => setTimeout(resolve, delay)),
+            randomString = () => Math.random().toString(36).slice(0,5)
 
       function defineComponent(config, base) {
-        let is = `test-component-${Math.random().toString(36).slice(0,5)}`,
+        let is = `test-component-${randomString()}`,
             behaviors = [ SimplaBehaviors.Element(config) ];
 
         return Polymer(Object.assign({ is, behaviors }, base));
@@ -127,6 +128,22 @@
               .then((response) => {
                 expect(response.data.meta).to.deep.equal({ foo: 'baz' });
               });
+          });
+
+          it('should not set to buffer while disconnected from DOM', () => {
+            let detachedComponent = new Component(),
+                meta = randomString();
+
+            detachedComponent.path = path;
+            detachedComponent.meta = meta;
+
+            return Promise.resolve()
+              .then(wait())
+              .then(() => Simpla.get(path))
+              .then(item => {
+                expect(item.data.meta).to.not.equal(meta);
+              });
+
           });
 
           it('should follow Simplas editable state', () => {
