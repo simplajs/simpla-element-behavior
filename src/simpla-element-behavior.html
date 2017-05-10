@@ -122,13 +122,15 @@
         Simpla.get(path)
           .then(item => {
             let isEmpty = !(item && item.data),
-                pathChanged = this.path !== path;
+                pathChanged = this.path !== path,
+                buffer = Simpla.getState('buffer'),
+                bufferIsClean = buffer && buffer[path] && !buffer[path].modified;
 
             if (pathChanged) {
               return;
             }
 
-            if (isEmpty) {
+            if (isEmpty && bufferIsClean) {
               // Load static content
               this._protectedSetCallback();
             } else {

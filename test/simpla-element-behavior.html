@@ -346,7 +346,7 @@
               });
           });
 
-          it(`should not set it's own content to the buffer if the buffer is already dirty`, () => {
+          it(`should not set it's own content to the buffer if data exists`, () => {
             let text = 'Hello World';
 
             return Simpla.set(path, { data: { text } })
