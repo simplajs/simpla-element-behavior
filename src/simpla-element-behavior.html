@@ -17,7 +17,7 @@
           dataProperties
         } = Object.assign({}, DEFAULT_CONFIG, config);
 
-    const propsToObservers = (prop) => `_protectedSetCallback(${prop})`;
+    const propsToObservers = (prop) => `_protectedSetCallback(${prop}.*)`;
 
     return {
       properties: {

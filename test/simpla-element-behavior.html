@@ -114,6 +114,21 @@
               })
           });
 
+          it('should update when complex data changes', () => {
+            component.meta = { foo: 'bar' }
+
+            return Promise.resolve()
+              .then(wait())
+              .then(() => {
+                component.set('meta.foo', 'baz');
+              })
+              .then(wait())
+              .then(() => Simpla.get(component.path))
+              .then((response) => {
+                expect(response.data.meta).to.deep.equal({ foo: 'baz' });
+              });
+          });
+
           it('should follow Simplas editable state', () => {
             component.editable = false;
 
