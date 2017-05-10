@@ -17,7 +17,7 @@
           dataProperties
         } = Object.assign({}, DEFAULT_CONFIG, config);
 
-    const propsToObservers = (prop) => `_protectedSetCallback(${prop}.*)`;
+    const propsToObservers = (prop) => `_syncedPropertiesObserver(${prop}.*)`;
 
     return {
       properties: {
@@ -205,6 +205,17 @@
           if (typeof data !== 'undefined' || data === null) {
             Simpla.set(this.path, { type, data });
           }
+        }
+      },
+
+      /**
+       * Observes the given properties that will sync to Simpla. Called protected
+       *  set callback but only if currently loaded
+       * @return {undefined}
+       */
+      _syncedPropertiesObserver() {
+        if (this.loaded) {
+          this._protectedSetCallback();
         }
       },
 

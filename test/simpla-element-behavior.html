@@ -22,7 +22,17 @@
   <body>
     <script>
       const wait = (delay = 5) => () => new Promise(resolve => setTimeout(resolve, delay)),
-            randomString = () => Math.random().toString(36).slice(0,5)
+            randomString = () => Math.random().toString(36).slice(0,5),
+            waitForLoaded = (element) => new Promise(resolve => {
+              function handler(event) {
+                if (event.detail.value) {
+                  resolve();
+                  element.removeEventListener('loaded-changed', handler);
+                }
+              };
+
+              element.addEventListener('loaded-changed', handler);
+            });
 
       function defineComponent(config, base) {
         let is = `test-component-${randomString()}`,
@@ -52,6 +62,8 @@
             component = new Component();
             component.path = path;
             document.body.appendChild(component);
+
+            return waitForLoaded(component);
           });
 
           afterEach(() => {
@@ -143,6 +155,25 @@
               .then(item => {
                 expect(item.data.meta).to.not.equal(meta);
               });
+          });
+
+          it('should not set to buffer before initial content loaded', () => {
+            let unloadedComponent = new Component(),
+                original = { meta: 'some-value' };
+
+            return Simpla.set(path, { data: original })
+              .then(() => {
+                document.body.appendChild(unloadedComponent);
+                unloadedComponent.path = path;
+                unloadedComponent.meta = 'another-value';
+              })
+              .then(wait())
+              .then(() => Simpla.get(path))
+              .then(item => {
+                expect(unloadedComponent.meta).to.deep.equal(original.meta);
+                expect(item.data).to.deep.equal(original);
+              });
+
 
           });
 
@@ -190,6 +221,8 @@
             });
 
             component.path = path;
+
+            return waitForLoaded(component);
           });
 
           afterEach(() => {
