@@ -10,7 +10,7 @@
 
     <!-- Import Simpla -->
     <script src="https://unpkg.com/simpla@^2.0.0"></script>
-    <script> Simpla.init('test'); </script>
+    <script> Simpla.init('test')</script>
 
     <!-- Import Polymer for test element -->
     <link rel="import" href="../bower_components/polymer/polymer.html">
@@ -186,6 +186,44 @@
               .then(() => {
                 expect(component.editable).to.be.true;
               });
+          });
+
+          describe('readonly', () => {
+            it('should not follow editable if readonly true', () => {
+              component.readonly = true;
+
+              return Promise.resolve()
+                .then(() => Simpla.editable(true))
+                .then(wait())
+                .then(() => {
+                  expect(component.editable).to.be.false;
+                });
+            });
+
+            it('should go uneditable if readonly is set', () => {
+              component.editable = true;
+              expect(component.editable).to.be.true;
+              component.readonly = true;
+              expect(component.editable).to.be.false;
+            });
+
+            it('should restore editable state if readonly is removed', () => {
+              component.readonly = true;
+
+              return Promise.resolve()
+                .then(() => Simpla.editable(true))
+                .then(wait())
+                .then(() => {
+                  component.readonly = false;
+                  expect(component.editable).to.be.true;
+                });
+            });
+
+            it('should bail from editable if readonly true', () => {
+              component.readonly = true;
+              component.editable = true;
+              expect(component.editable).to.be.false;
+            });
           });
         });
 

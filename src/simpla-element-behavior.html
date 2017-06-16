@@ -36,7 +36,18 @@
          */
         editable: {
           type: Boolean,
+          observer: '_disableEditableIfReadonly',
           notify: true
+        },
+
+        /**
+         * Stops element going editable
+         * @type {Boolean}
+         */
+        readonly: {
+          type: Boolean,
+          observer: '_updateReadonly',
+          value: false
         },
 
         /**
@@ -80,7 +91,7 @@
         this._attached = true;
 
         // Setup editable property
-        this.editable = this.editable || Simpla.getState('editable');
+        this.editable = this.readonly ? false : this.editable || Simpla.getState('editable');
         this._observeSimplaEditable();
 
         // Try set up path observer
@@ -108,6 +119,28 @@
       _initPathIfReady(path) {
         if (this._attached && typeof path !== 'undefined') {
           this._initSimplaPath(path);
+        }
+      },
+
+      /**
+       * Update editable when readonly changes
+       * @param  {Boolean} readonly Current value of readonly prop
+       * @return {undefined}
+       */
+      _updateReadonly(readonly) {
+        this.editable = readonly ? false : Simpla.getState('editable');
+      },
+
+      /**
+       * Monkeypatch editable prop
+       * THIS IS A HACK - should be computed prop from public editable + readonly
+       * But that is a breaking change, and not worth doing now
+       * @param  {Boolean} editable Current value of editable prop
+       * @return {undefined}
+       */
+      _disableEditableIfReadonly(editable) {
+        if (this.readonly && editable) {
+          this.editable = false;
         }
       },
 
@@ -226,14 +259,16 @@
        * @return {undefined}
        */
       _observeSimplaEditable() {
-        let observers = this.__simplaObservers;
+        let { __simplaObservers: observers } = this;
 
         if (observers.editable) {
           observers.editable.unobserve();
         }
 
         observers.editable = Simpla.observeState('editable', editable => {
-          this.editable = editable;
+          if (!this.readonly) {
+            this.editable = editable;
+          }
         });
       }
     }

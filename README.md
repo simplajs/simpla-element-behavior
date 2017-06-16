@@ -53,6 +53,7 @@ Property   | Type      | Description
 ---------- | --------- | ------------                                                                         
 `path`     | `String`  | Content path where the element will store its data on Simpla's API, set by the user
 `editable` | `Boolean` | Whether the element should be editable, synced to Simpla's `'editable'` state       
+`readonly` | `Boolean` | Whether an element should be able to go editable
 `loaded`   | `Boolean` | Whether a new path's data has been set on the element                               
 
 ## Contributing
