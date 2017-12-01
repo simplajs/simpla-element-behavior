@@ -6,18 +6,15 @@
     <script src="../../web-component-tester/browser.js"></script>
 
     <!-- Import WC polyfills -->
-    <script src="https://unpkg.com/webcomponents.js@^0.7.24/webcomponents-lite.min.js"></script>
+    <script src="/bower_components/webcomponentsjs/custom-elements-es5-adapter.js"></script>
+    <script src="/bower_components/webcomponentsjs/webcomponents-loader.js"></script>
 
     <!-- Import Simpla -->
-    <script src="https://unpkg.com/simpla@^2.0.0"></script>
-    <script> Simpla.init('test')</script>
-
-    <!-- Import Polymer for test element -->
-    <link rel="import" href="../bower_components/polymer/polymer.html">
+    <script src="/node_modules/simpla/simpla.min.js"></script>
+    <script> Simpla.init({})</script>
 
     <!-- Import the element to test -->
     <link rel="import" href="../simpla-element-behavior.html">
-
   </head>
   <body>
     <script>
@@ -35,34 +32,43 @@
             });
 
       function defineComponent(config, base) {
-        let is = `test-component-${randomString()}`,
-            behaviors = [ SimplaBehaviors.Element(config) ];
+        const Component = class extends window.SimplaElement(HTMLElement) {
+          static get simplaConfig() {
+            return config;
+          }
+        }
 
-        return Polymer(Object.assign({ is, behaviors }, base));
+        customElements.define(`test-component-${randomString()}`, Component);
+
+        return Component;
+      }
+
+      function fire(on, name) {
+        on.dispatchEvent(new CustomEvent(name));
       }
 
       describe('simpla-behavior', () => {
         let path = '/some-path';
 
         beforeEach(() => {
-          Simpla.set(path, { data: {} });
+          return Simpla.set(path, { data: {} });
         });
 
         describe('basic functionality', () => {
-          let base = { properties: { meta: Object } },
-              config = {
+          let config = {
                 type: 'Component',
-                dataProperties: [ 'meta' ]
+                dataProperties: [ 'meta' ],
+                events: [ 'change' ]
               },
               Component,
               component;
 
           beforeEach(() => {
-            Component = defineComponent(config, base);
+            Component = defineComponent(config);
             component = new Component();
             component.path = path;
             document.body.appendChild(component);
-
+            
             return waitForLoaded(component);
           });
 
@@ -71,10 +77,14 @@
           });
 
           it('should set with given type', () => {
-            component.meta = { foo: 'bar' }
+            component.meta = { foo: 'bar' };
+            fire(component, 'change');
+
             return Promise.resolve()
               .then(wait())
-              .then(() => Simpla.get(path))
+              .then(() => {
+                return Simpla.get(path)
+              })
               .then(response => {
                 expect(response.type).to.equal(config.type);
               });
@@ -82,7 +92,10 @@
 
           it('should set property value to Simpla', () => {
             return Promise.resolve()
-              .then(() => component.meta = { foo: 'bar' })
+              .then(() => {
+                component.meta = { foo: 'bar' };
+                fire(component, 'change');            
+              })
               .then(wait())
               .then(() => Simpla.get(path))
               .then(response => {
@@ -127,28 +140,14 @@
               })
           });
 
-          it('should update when complex data changes', () => {
-            component.meta = { foo: 'bar' }
-
-            return Promise.resolve()
-              .then(wait())
-              .then(() => {
-                component.set('meta.foo', 'baz');
-              })
-              .then(wait())
-              .then(() => Simpla.get(component.path))
-              .then((response) => {
-                expect(response.data.meta).to.deep.equal({ foo: 'baz' });
-              });
-          });
-
           it('should not set to buffer while disconnected from DOM', () => {
             let detachedComponent = new Component(),
                 meta = randomString();
 
             detachedComponent.path = path;
             detachedComponent.meta = meta;
-
+            fire(component, 'change');
+            
             return Promise.resolve()
               .then(wait())
               .then(() => Simpla.get(path))
@@ -166,6 +165,7 @@
                 document.body.appendChild(unloadedComponent);
                 unloadedComponent.path = path;
                 unloadedComponent.meta = 'another-value';
+                fire(component, 'change');            
               })
               .then(wait())
               .then(() => Simpla.get(path))
@@ -187,6 +187,73 @@
                 expect(component.editable).to.be.true;
               });
           });
+
+          it('should not update data if path changed mid-request', () => {
+            let itemA = { path: '/path-a', data: { text: 'foo' } },
+                itemB = { path: '/path-b', data: { text: 'bar' } },
+                calledWithPaths = [],
+                waitForSetup;
+
+            waitForSetup = Promise.all([
+              Simpla.set(itemA.path, itemA),
+              Simpla.set(itemB.path, itemB)
+            ]).then(([ responseA, responseB ]) => {
+              itemA = responseA;
+              itemB = responseB;
+            });
+
+            // This is a hack, can't seem to stub methods on a prototype
+            // and component.updateFromSimpla = sinon.stub() appears to 
+            // have the same broken behavior
+            component.updateFromSimpla = item => {
+              calledWithPaths.push(item.path);
+            }
+            
+            return Promise.resolve()
+              .then(() => waitForSetup)
+              .then(() => {
+                component.path = itemA.path;
+                component.path = itemB.path;
+              })
+              .then(wait())
+              .then(() => {
+                expect(calledWithPaths).to.not.contain(itemA.path);
+                expect(calledWithPaths).to.contain(itemB.path);
+              });
+          });
+
+          it('should not set back to simpla during load from simpla', () => {
+            let Component = defineComponent({
+                  type: 'Component',
+                  dataProperties: [ 'text' ],
+                  events: [ 'change' ]
+                }),
+                component = new Component();
+
+            component.path = path;
+            document.body.appendChild(component);
+
+            component.updateSimplaBuffer = sinon.stub();
+
+            // Setup setters / getters to re-trigger a change
+            Object.defineProperty(component, 'text', {
+              set(value) {
+                this._text = value;
+                fire(this, 'change');
+              },
+
+              get(value) {
+                return this._text;
+              }
+            });
+
+            return Promise.resolve()
+              .then(() => Simpla.set(path, { data: { text: 'Hello World' } }))
+              .then(wait())
+              .then(() => {
+                expect(component.updateSimplaBuffer.called).to.be.false;
+              });
+          });          
 
           describe('readonly', () => {
             it('should not follow editable if readonly true', () => {
@@ -225,131 +292,11 @@
               expect(component.editable).to.be.false;
             });
           });
-        });
-
-        describe('custom callbacks, path changing', () => {
-          let base,
-              config,
-              component,
-              Component;
-
-          base = {
-            properties: { text: String },
-            _setToSimpla: () => {},
-            _loadFromSimpla: () => {}
-          };
-
-          config = {
-            type: 'Component',
-            dataProperties: [ 'text' ],
-            getCallback: '_loadFromSimpla',
-            setCallback: '_setToSimpla'
-          }
-
-          beforeEach(() => {
-            Component = defineComponent(config, base);
-
-            component = new Component();
-            document.body.appendChild(component);
-
-            sinon.stub(component, '_loadFromSimpla');
-
-            sinon.stub(component, '_setToSimpla', function() {
-              return { text: this.text };
-            });
-
-            component.path = path;
-
-            return waitForLoaded(component);
-          });
-
-          afterEach(() => {
-            component.parentElement.removeChild(component);
-          });
-
-          it('should use supplied get callback', () => {
-            let item = { data: { text: 'foo' } };
-
-            return Promise.resolve()
-              .then(() => Simpla.set(path, item))
-              // Normalize item
-              .then((response) => item = response)
-              .then(wait())
-              .then(() => {
-                expect(component._loadFromSimpla.calledWith(item)).to.be.true;
-              });
-          });
-
-          it('should use supplied set callback', () => {
-            return Promise.resolve()
-              .then(() => component.text = 'foo')
-              .then(wait())
-              .then(() => Simpla.get(path))
-              .then((response) => {
-                expect(component._setToSimpla.called).to.be.true;
-                expect(response.data.text).to.equal('foo');
-              });
-          });
-
-          it('should not update data if path changed mid-request', () => {
-            let pathA = '/path-a',
-                pathB = '/path-b',
-                pathAItem,
-                pathBItem;
-
-            component = new Component();
-            document.body.appendChild(component);
-            sinon.stub(component, '_loadFromSimpla');
-
-            return Promise.resolve()
-              .then(() => Simpla.set(pathA, { data: { text: 'foo' } }))
-              .then(response => pathAItem = response)
-              .then(() => {
-                let promise;
-                component.path = pathA;
-                promise = Simpla.set(pathB, { data: { text: 'bar' } });
-                component.path = pathB;
-                return promise;
-              })
-              .then(response => pathBItem = response)
-              .then(wait())
-              .then(() => {
-                expect(component._loadFromSimpla.calledWith(pathAItem)).to.be.false;
-                expect(component._loadFromSimpla.calledWith(pathBItem)).to.be.true;
-              });
-          });
+          
         });
 
         describe('preventing infinite loops', () => {
-          let config,
-              base;
-
-          config = {
-            type: 'Component',
-            dataProperties: [ 'text' ],
-            setCallback: 'setCallback'
-          };
-
-          base = {
-            properties: { text: String },
-            setCallback: () => {}
-          };
-
-          it('should not set to buffer during load from simpla', () => {
-            let Component = defineComponent(config, base),
-                component = new Component();
-
-            component.path = path;
-
-            sinon.stub(component, 'setCallback');
-
-            return Promise.resolve()
-              .then(() => Simpla.set(path, { data: { text: 'Hello World' } }))
-              .then(wait())
-              .then(() => {
-                expect(component.setCallback.called).to.be.false;
-              });
-          });
+          
         });
 
         describe('static-content', () => {
@@ -358,8 +305,7 @@
 
           beforeEach(() => {
             let Component = defineComponent(
-              { type: 'Component', dataProperties: [ 'text' ] },
-              { properties: { text: String } }
+              { type: 'Component', dataProperties: [ 'text' ], events: [ 'change' ] }
             );
 
             component = new Component();
@@ -375,12 +321,19 @@
           });
 
           it(`should set content into the buffer if no content is available`, () => {
-            component.path = path;
-
-            return Promise.resolve(wait())
+            return Promise.resolve()
+              // Make sure buffer is filled
               .then(() => Simpla.get(path))
-              .then((content) => {
-                expect(content.data.text).to.equal(component.text);
+              .then(() => {
+                return new Promise(resolve => {
+                  let observer = Simpla.observe(path, item => {
+                    expect(item.data.text).to.equal(component.text);
+                    observer.unobserve();
+                    resolve();
+                  });
+                  
+                  component.path = path;
+                });
               });
           });
 
