@@ -1,1 +1,348 @@
-<script>"use strict";function _defineProperty(e,t,a){return t in e?Object.defineProperty(e,t,{value:a,enumerable:!0,configurable:!0,writable:!0}):e[t]=a,e}var _extends=Object.assign||function(e){for(var t=1;t<arguments.length;t++){var a=arguments[t];for(var i in a)Object.prototype.hasOwnProperty.call(a,i)&&(e[i]=a[i])}return e},DEFAULT_CONFIG={getCallback:"_updateFromSimpla",setCallback:"_updateSimplaBuffer"},ERRORS={NO_SIMPLA:"Cannot find Simpla, ensure it is included before this component"};window.SimplaBehaviors=window.SimplaBehaviors||{},SimplaBehaviors.Element=function(e){var t=_extends({},DEFAULT_CONFIG,e),a=t.type,i=t.getCallback,r=t.setCallback,n=t.dataProperties,o=function(e){return"_syncedPropertiesObserver("+e+".*)"};return{properties:{path:{type:String,observer:"_initPathIfReady"},editable:{type:Boolean,observer:"_disableEditableIfReadonly",notify:!0},readonly:{type:Boolean,observer:"_updateReadonly"},loaded:{type:Boolean,readOnly:!0,notify:!0,value:!1},__simplaObservers:{type:Object,value:function(){return{}}}},observers:n.map(o),created:function(){if(!window.Simpla)throw new Error(ERRORS.NO_SIMPLA)},attached:function(){this._attached=!0,this.editable=!this.readonly&&(this.editable||Simpla.getState("editable")),this._observeSimplaEditable(),this._initPathIfReady(this.path)},detached:function(){var e=this;Object.keys(this.__simplaObservers).forEach(function(t){e.__simplaObservers[t].unobserve()}),this.__simplaObservers={}},_initPathIfReady:function(e){this._attached&&void 0!==e&&this._initSimplaPath(e)},_updateReadonly:function(e){this.editable=!e&&Simpla.getState("editable")},_disableEditableIfReadonly:function(e){this.readonly&&e&&(this.editable=!1)},_initSimplaPath:function(e){var t=this;this._setLoaded(!1),Simpla.get(e).then(function(a){var i=!(a&&a.data),r=t.path!==e,n=Simpla.getState("buffer"),o=n&&n[e]&&!n[e].modified;r||(i&&o?t._protectedSetCallback():t._protectedGetCallback(a),t._setLoaded(!0))}),this._observeSimplaBuffer(e)},_observeSimplaBuffer:function(e){var t=this,a=this.__simplaObservers;e&&(a.buffer&&a.buffer.unobserve(),a.buffer=Simpla.observe(e,function(e){e&&e.data&&t._protectedGetCallback(e)}))},_updateSimplaBuffer:function(){var e=this;return n.reduce(function(t,a){return _extends(t,_defineProperty({},a,e[a]))},{})},_updateFromSimpla:function(e){_extends(this,e.data)},_protectedGetCallback:function(e){this.__loadingFromSimpla=!0,this[i](e),this.__loadingFromSimpla=!1},_protectedSetCallback:function(){if(!this.__loadingFromSimpla&&this._attached&&this.path){var e=this[r]();void 0===e&&null!==e||Simpla.set(this.path,{type:a,data:e})}},_syncedPropertiesObserver:function(){this.loaded&&this._protectedSetCallback()},_observeSimplaEditable:function(){var e=this,t=this.__simplaObservers;t.editable&&t.editable.unobserve(),t.editable=Simpla.observeState("editable",function(t){e.readonly||(e.editable=t)})}}}</script> 
+<script>'use strict';
+
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+function changed(from, prop, value) {
+  from.dispatchEvent(new CustomEvent(prop + '-changed', { detail: { value: value } }));
+}
+
+var ERRORS = {
+  NO_SIMPLA: 'Cannot find Simpla, ensure it is included before this component'
+};
+
+window.SimplaElement = function (Base) {
+  return function (_Base) {
+    _inherits(_class, _Base);
+
+    function _class() {
+      _classCallCheck(this, _class);
+
+      var _this = _possibleConstructorReturn(this, (_class.__proto__ || Object.getPrototypeOf(_class)).call(this));
+
+      if (!window.Simpla) {
+        throw new Error(NO_SIMPLA);
+      }
+
+      _this._loaded = false;
+      _this.__simplaObservers = {};
+      _this.__triggerBufferSync = function () {
+        if (_this.loaded) {
+          _this._protectedSetCallback();
+        }
+      };
+      return _this;
+    }
+
+    _createClass(_class, [{
+      key: 'attributeChangedCallback',
+      value: function attributeChangedCallback(attr, oldValue, newValue) {
+        if (attr === 'path') {
+          this.path = newValue;
+        } else {
+          // Cast as Boolean. 
+          this[attr] = newValue !== null;
+        }
+      }
+
+      /**
+       * Setup editable state observer on attach
+       * @return {undefined}
+       */
+
+    }, {
+      key: 'connectedCallback',
+      value: function connectedCallback() {
+        var _this2 = this;
+
+        var events = this.constructor.simplaConfig.events;
+
+
+        _get(_class.prototype.__proto__ || Object.getPrototypeOf(_class.prototype), 'connectedCallback', this) && _get(_class.prototype.__proto__ || Object.getPrototypeOf(_class.prototype), 'connectedCallback', this).call(this);
+
+        events.forEach(function (event) {
+          return _this2.addEventListener(event, _this2.__triggerBufferSync);
+        });
+
+        this.editable = this.readonly ? false : this.editable || Simpla.getState('editable');
+
+        this._observeSimplaEditable();
+        this._initPathIfReady(this.path);
+      }
+
+      /**
+       * Clean up Simpla observers on detach
+       * @return {undefined}
+       */
+
+    }, {
+      key: 'disconnectedCallback',
+      value: function disconnectedCallback() {
+        var _this3 = this;
+
+        var events = this.constructor.simplaConfig.events;
+
+
+        _get(_class.prototype.__proto__ || Object.getPrototypeOf(_class.prototype), 'disconnectedCallback', this) && _get(_class.prototype.__proto__ || Object.getPrototypeOf(_class.prototype), 'disconnectedCallback', this).call(this);
+
+        events.forEach(function (event) {
+          return _this3.removeEventListener(event, _this3.__triggerBufferSync);
+        });
+
+        Object.keys(this.__simplaObservers).forEach(function (observer) {
+          _this3.__simplaObservers[observer].unobserve();
+        });
+
+        this.__simplaObservers = {};
+      }
+
+      /**
+       * Checks if connected and has a valid path. If so, calls _initSimplaPath
+       * @param  {String} path Current value of path prop
+       * @return {undefined}
+       */
+
+    }, {
+      key: '_initPathIfReady',
+      value: function _initPathIfReady(path) {
+        if (this.isConnected && typeof path !== 'undefined') {
+          this._initSimplaPath(path);
+        }
+      }
+
+      /**
+       * Init the path observer
+       * @param  {String} path Current value of path prop
+       * @return {undefined}
+       */
+
+    }, {
+      key: '_initSimplaPath',
+      value: function _initSimplaPath(path) {
+        var _this4 = this;
+
+        this._loaded = false;
+
+        Simpla.get(path).then(function (item) {
+          var isEmpty = !(item && item.data),
+              pathChanged = _this4.path !== path,
+              buffer = Simpla.getState('buffer'),
+              bufferIsClean = buffer && buffer[path] && !buffer[path].modified;
+
+          if (pathChanged) {
+            return;
+          }
+
+          if (isEmpty && bufferIsClean) {
+            // Load static content
+            _this4._protectedSetCallback().then(function () {
+              _this4._loaded = true;
+            });
+          } else {
+            _this4._protectedGetCallback(item);
+            _this4._loaded = true;
+          }
+        });
+
+        this._observeSimplaBuffer(path);
+      }
+
+      /**
+       * Observe buffer for changes to update element
+       * @param  {String} path Path to observe in buffer
+       * @return {undefined}
+       */
+
+    }, {
+      key: '_observeSimplaBuffer',
+      value: function _observeSimplaBuffer(path) {
+        var _this5 = this;
+
+        var observers = this.__simplaObservers;
+
+        if (!path) {
+          return;
+        }
+
+        if (observers.buffer) {
+          observers.buffer.unobserve();
+        }
+
+        observers.buffer = Simpla.observe(path, function (item) {
+          if (item && item.data) {
+            _this5._protectedGetCallback(item);
+          }
+        });
+      }
+
+      /**
+       * Sets up the data property to send to Simpla based on given dataProperties
+       * @return {Object}  Data to set to Simpla
+       */
+
+    }, {
+      key: 'updateSimplaBuffer',
+      value: function updateSimplaBuffer() {
+        var _this6 = this;
+
+        var dataProperties = this.constructor.simplaConfig.dataProperties;
+
+
+        return dataProperties.reduce(function (data, prop) {
+          return _extends(data, _defineProperty({}, prop, _this6[prop]));
+        }, {});
+      }
+
+      /**
+       * Update element from Simpla data
+       * @param  {Object} item The data from Simpla to update with
+       * @return {undefined}
+       */
+
+    }, {
+      key: 'updateFromSimpla',
+      value: function updateFromSimpla(item) {
+        _extends(this, item.data);
+      }
+
+      /**
+       * Calls the getCallback but protects against triggering an infinite loop
+       * @param  {Object} item Item to give to getCallback
+       * @return {undefined}
+       */
+
+    }, {
+      key: '_protectedGetCallback',
+      value: function _protectedGetCallback(item) {
+        this.__loadingFromSimpla = true;
+        this.updateFromSimpla(item);
+        this.__loadingFromSimpla = false;
+      }
+
+      /**
+       * Calls the setCallback but protects against triggering an infinite loop
+       * @return {undefined}
+       */
+
+    }, {
+      key: '_protectedSetCallback',
+      value: function _protectedSetCallback() {
+        var done = Promise.resolve();
+        if (!this.__loadingFromSimpla && this.isConnected && this.path) {
+          var data = this.updateSimplaBuffer(),
+              type = this.constructor.simplaConfig.type;
+
+
+          if (typeof data !== 'undefined' || data === null) {
+            done = Simpla.set(this.path, { type: type, data: data });
+          }
+        }
+
+        return done;
+      }
+
+      /**
+       * Editable state observer
+       * @return {undefined}
+       */
+
+    }, {
+      key: '_observeSimplaEditable',
+      value: function _observeSimplaEditable() {
+        var _this7 = this;
+
+        var observers = this.__simplaObservers;
+
+
+        if (observers.editable) {
+          observers.editable.unobserve();
+        }
+
+        observers.editable = Simpla.observeState('editable', function (editable) {
+          _this7.editable = editable;
+        });
+      }
+    }, {
+      key: 'path',
+      get: function get() {
+        return this.__path;
+      },
+      set: function set(value) {
+        var previous = this.__path;
+        this.__path = value;
+
+        if (value !== previous) {
+          this._initPathIfReady(value);
+        }
+      }
+    }, {
+      key: 'editable',
+      get: function get() {
+        return this.__editable;
+      },
+      set: function set(value) {
+        var previous = this.__editable;
+
+        if (!this.readonly) {
+          this.__editable = value;
+
+          if (value !== previous) {
+            changed(this, 'editable', value);
+          }
+        }
+      }
+    }, {
+      key: 'readonly',
+      get: function get() {
+        return this.__readonly;
+      },
+      set: function set(value) {
+        var previous = this.__readonly;
+
+        // Disable to allow editable to be set however we like
+        this.__readonly = false;
+
+        if (!value && previous === true) {
+          this.editable = Simpla.getState('editable');
+        } else if (value) {
+          this.editable = false;
+        }
+
+        this.__readonly = value;
+      }
+    }, {
+      key: 'loaded',
+      get: function get() {
+        return this.__loaded;
+      }
+    }, {
+      key: '_loaded',
+      set: function set(value) {
+        var previous = this.__loaded;
+        this.__loaded = value;
+
+        if (value !== previous) {
+          changed(this, 'loaded', value);
+        }
+      }
+    }], [{
+      key: 'observedAttributes',
+      get: function get() {
+        return ['path', 'editable', 'readonly', 'loaded'];
+      }
+    }]);
+
+    return _class;
+  }(Base);
+};</script>
