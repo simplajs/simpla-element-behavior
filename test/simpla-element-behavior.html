@@ -321,12 +321,19 @@
           });
 
           it(`should set content into the buffer if no content is available`, () => {
-            component.path = path;
-
-            return waitForLoaded(component)
+            return Promise.resolve()
+              // Make sure buffer is filled
               .then(() => Simpla.get(path))
-              .then((content) => {
-                expect(content.data.text).to.equal(component.text);
+              .then(() => {
+                return new Promise(resolve => {
+                  let observer = Simpla.observe(path, item => {
+                    expect(item.data.text).to.equal(component.text);
+                    observer.unobserve();
+                    resolve();
+                  });
+                  
+                  component.path = path;
+                });
               });
           });
 

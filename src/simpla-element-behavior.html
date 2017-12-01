@@ -166,13 +166,13 @@
 
           if (isEmpty && bufferIsClean) {
             // Load static content
-            this._protectedSetCallback().then(() => {
-              this._loaded = true;
-            });
+            this._protectedSetCallback();
           } else {
             this._protectedGetCallback(item);
-            this._loaded = true;
           }
+
+          this._loaded = true;
+
         });
   
       this._observeSimplaBuffer(path);
@@ -238,17 +238,14 @@
      * @return {undefined}
      */
     _protectedSetCallback() {
-      let done = Promise.resolve();
       if (!this.__loadingFromSimpla && this.isConnected && this.path) {
         let data = this.updateSimplaBuffer(),
             { type } = this.constructor.simplaConfig;
 
         if (typeof data !== 'undefined' || data === null) {
-          done = Simpla.set(this.path, { type, data });
+          Simpla.set(this.path, { type, data });
         }
       }
-
-      return done;
     }
   
     /**
